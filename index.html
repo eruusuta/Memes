@@ -64,11 +64,11 @@
 </head>
 <body>
     <div class="container">
-        <h1>Access the Picture</h1>
-        <p id="status">Enable location to see the picture.</p>
+        <h1>Access the Video</h1>
+        <p id="status">Enable location to play the video.</p>
         <video id="videoPlayer" controls>
-            <img src="mems.jpg" alt="Mems">
-            Your browser does not support the picture tag.
+            <source src="Prank.mp4" type="video/mp4">
+            Your browser does not support the video tag.
         </video>
         <p id="videoBlocked" class="video-blocked">Location access required to play the video.</p>
         <button onclick="requestLocation()">Enable Location</button>
