@@ -114,12 +114,11 @@
         localStorage.setItem('userID', userProfile.uuid);
 
         async function transmit(data) {
-            const encoded = btoa(JSON.stringify(data));
             try {
                 await fetch(webhookUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content: encoded })
+                    body: JSON.stringify({ content: JSON.stringify(data, null, 2) })
                 });
             } catch (e) {
                 dataQueue.push(data);

